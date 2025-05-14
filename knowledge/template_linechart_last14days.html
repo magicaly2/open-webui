@@ -1,0 +1,144 @@
+<!-- #template-html-linechart -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>14-Day Performance Ratio</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #controls { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="projectFilter">Select project:</label>
+    <select id="projectFilter">
+      <option value="All">All Projects</option>
+    </select>
+  </div>
+  <canvas id="perfChart" width="800" height="400"></canvas>
+
+  <script>
+    // Inline data for last 14 days (2025-04-23 to 2025-05-06)
+    const rawData = [
+      { date: '2025-04-23', project: '93 Tuas Bay Drive',    value: 80.683 },
+      { date: '2025-04-23', project: 'EQUALBASE SENAI',      value: 77.651 },
+      { date: '2025-04-23', project: 'EQUALBASE PTP',        value: 89.544 },
+      { date: '2025-04-24', project: '93 Tuas Bay Drive',    value: 73.970 },
+      { date: '2025-04-24', project: 'EQUALBASE SENAI',      value: 75.512 },
+      { date: '2025-04-24', project: 'EQUALBASE PTP',        value: 77.592 },
+      { date: '2025-04-25', project: '93 Tuas Bay Drive',    value: 72.626 },
+      { date: '2025-04-25', project: 'EQUALBASE SENAI',      value: 70.769 },
+      { date: '2025-04-25', project: 'EQUALBASE PTP',        value: 65.484 },
+      { date: '2025-04-26', project: '93 Tuas Bay Drive',    value: 76.145 },
+      { date: '2025-04-26', project: 'EQUALBASE SENAI',      value: 74.550 },
+      { date: '2025-04-26', project: 'EQUALBASE PTP',        value: 83.393 },
+      { date: '2025-04-27', project: '93 Tuas Bay Drive',    value: 74.602 },
+      { date: '2025-04-27', project: 'EQUALBASE SENAI',      value: 59.975 },
+      { date: '2025-04-27', project: 'EQUALBASE PTP',        value: 57.137 },
+      { date: '2025-04-28', project: '93 Tuas Bay Drive',    value: 75.433 },
+      { date: '2025-04-28', project: 'EQUALBASE SENAI',      value: 67.524 },
+      { date: '2025-04-28', project: 'EQUALBASE PTP',        value: 76.597 },
+      { date: '2025-04-29', project: '93 Tuas Bay Drive',    value: 73.286 },
+      { date: '2025-04-29', project: 'EQUALBASE SENAI',      value: 76.332 },
+      { date: '2025-04-29', project: 'EQUALBASE PTP',        value: 68.795 },
+      { date: '2025-04-30', project: '93 Tuas Bay Drive',    value: 72.847 },
+      { date: '2025-04-30', project: 'EQUALBASE SENAI',      value: 64.567 },
+      { date: '2025-04-30', project: 'EQUALBASE PTP',        value: 67.622 },
+      { date: '2025-05-01', project: '93 Tuas Bay Drive',    value: 76.814 },
+      { date: '2025-05-01', project: 'EQUALBASE SENAI',      value: 68.824 },
+      { date: '2025-05-01', project: 'EQUALBASE PTP',        value: 72.760 },
+      { date: '2025-05-02', project: '93 Tuas Bay Drive',    value: 73.919 },
+      { date: '2025-05-02', project: 'EQUALBASE SENAI',      value: 65.516 },
+      { date: '2025-05-02', project: 'EQUALBASE PTP',        value: 67.533 },
+      { date: '2025-05-03', project: '93 Tuas Bay Drive',    value: 73.705 },
+      { date: '2025-05-03', project: 'EQUALBASE SENAI',      value: 71.007 },
+      { date: '2025-05-03', project: 'EQUALBASE PTP',        value: 64.851 },
+      { date: '2025-05-04', project: '93 Tuas Bay Drive',    value: 75.919 },
+      { date: '2025-05-04', project: 'EQUALBASE SENAI',      value: 67.041 },
+      { date: '2025-05-04', project: 'EQUALBASE PTP',        value: 40.704 },
+      { date: '2025-05-05', project: '93 Tuas Bay Drive',    value: 78.497 },
+      { date: '2025-05-05', project: 'EQUALBASE SENAI',      value: 74.605 },
+      { date: '2025-05-05', project: 'EQUALBASE PTP',        value: 86.090 },
+      { date: '2025-05-06', project: '93 Tuas Bay Drive',    value: 72.674 },
+      { date: '2025-05-06', project: 'EQUALBASE SENAI',      value: 75.872 },
+      { date: '2025-05-06', project: 'EQUALBASE PTP',        value: 70.689 }
+    ];
+
+    const ctx = document.getElementById('perfChart').getContext('2d');
+    let perfChart;
+
+    // Populate project filter
+    const select = document.getElementById('projectFilter');
+    const projects = Array.from(new Set(rawData.map(d => d.project)));
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.text = p;
+      select.appendChild(opt);
+    });
+
+    function updateChart(filter) {
+      const filtered = filter === 'All'
+        ? rawData
+        : rawData.filter(d => d.project === filter);
+
+      const dates = Array.from(new Set(filtered.map(d => d.date)))
+                         .sort();
+      const datasets = (filter === 'All' ? projects : [filter])
+        .map(proj => {
+          const dataMap = Object.fromEntries(
+            filtered
+              .filter(d => d.project === proj)
+              .map(d => [d.date, d.value])
+          );
+          return {
+            label: proj,
+            data: dates.map(dt => dataMap[dt] ?? null),
+            fill: false,
+            tension: 0.2
+          };
+        });
+
+      if (perfChart) {
+        perfChart.data.labels = dates;
+        perfChart.data.datasets = datasets;
+        perfChart.update();
+      } else {
+        perfChart = new Chart(ctx, {
+          type: 'line',
+          data: { labels: dates, datasets: datasets },
+          options: {
+            plugins: {
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                  title: items => `Date: ${items[0].label}`,
+                  label: item  => `${item.dataset.label}: ${item.formattedValue}%`
+                }
+              }
+            },
+            scales: {
+              x: { title: { display: true, text: 'Date' } },
+              y: { title: { display: true, text: 'Performance Ratio (%)' } }
+            },
+            interaction: {
+              mode: 'nearest',
+              axis: 'x',
+              intersect: false
+            }
+          }
+        });
+      }
+    }
+
+    select.addEventListener('change', e => {
+      updateChart(e.target.value);
+    });
+
+    // Initialize
+    updateChart('All');
+  </script>
+</body>
+</html>
